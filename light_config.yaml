@@ -1,0 +1,73 @@
+metadata:
+  #Unique identifier for organisational purposes. make sure this is same as the shell command ID
+  # -------MODIFY-------
+  uniqueID: ids_test2
+  # _________
+  #Specify folder to store created files
+  # -------MODIFY-------
+  artefact: artefact
+  # _________  
+  #DatasetName (for graph title purposes)
+  name: CIC2017_Friday #Wednesday
+  #Result folder name (for all results)
+  # -------MODIFY-------
+  result: result/test2_trialrun0 
+  # _________
+#Please input the relative path of the dataset accurately!
+datapath:
+  #Attack DS + Normal DS (.csv format)
+  a: ../datasets/Friday2017/A.csv
+  #Normal DS (.parquet format)
+  n1: ../datasets/Friday2017/N1.csv
+  #True Normal DS (.parquet format)
+  n2: ../datasets/Friday2017/N2.csv
+#Range of values to hash to.
+#TimeDifference bin range can be found inside preprocess.py:getTimeClass function
+variablesHash:
+  #Hash Range for HTTP User Agent.
+  agentHashRange: 50
+  #Hash Range for HTTP GET Queries
+  queryHashRange: 4
+  #Threshold for hashing requests. If lesser than percentage we hash it to inputHashRange
+  #If larger than percentage we preserve the original request
+  inputHashThreshold: 0.01
+  # -------MODIFY-------  
+  #Hash Range for Input (Input is the 4 temporal features)
+  inputHashRange: 750 #1000 ##
+  # _________  
+# -------MODIFY-------  
+#Sequence Length
+SEQUENCELENGTH: 200 
+# _________
+#Keras Model Parameters
+MODELPARAMS:
+  #Emedding Layer Output Dimension
+  INPUT_EMBED_DIM: 512 #256 ##
+  #LSTM Output Dimension
+  LSTM_DIM: 300 #256 ##
+  LSTM_DIM_Q: 300
+  #Adam Learning Rates
+  LEARNING_RATE_P: 0.005 #0.001 ##
+  LEARNING_RATE_Q: 0.005 #0.002 #0.01 ##
+#Keras Training Parameters
+TRAININGPARAMS:
+  #Number of Epochs to train for P
+  EPOCHS: 50 ##100
+  #Number of Epochs per interval during interval training of Q
+  INTERVALEPOCHS: 3
+  #Whether Q Should have 2 Layers of LSTM. If false 1 layer will be used instead. If true 2 layer will be used.
+  # -------MODIFY-------
+  2LAYERLSTMQ: True #False ##
+  # _________
+  #Whether Q Should transfer All weights or not. If false only embedding will be trasnfered. If true, all layers will be transferred.
+  ALLLAYERTRANSFER: True #False ##
+  #Batch size
+  BATCH_SIZE: 256 # 512(causes error for online training if too big batch) 
+  #Percentage of data to be used for training. (1 - Percentage) is for validation.
+  PERCENTAGETRAIN: 0.9 #0.8 #0.75 ##
+  #Number of workers to use during training
+  WORKERS: 24
+  #Allow multiprocessing during training (Not sure what this does) True/False
+  MULTIPROCESSING: True
+#Boolean if online training or not
+ONLINETRAINING: True #False #
