@@ -11,8 +11,10 @@ metadata:
   name: CIC2017_Friday #Wednesday
   #Result folder name (for all results)
   # -------MODIFY-------
-  result: result/test2_trialrun0 
+  result: result/test2_trialrun1 
   # _________
+  #Set number of intervals to use as TEST set (preprocess.py)
+  attackintervals: 5 #10
 #Please input the relative path of the dataset accurately!
 datapath:
   #Attack DS + Normal DS (.csv format)
@@ -33,41 +35,44 @@ variablesHash:
   inputHashThreshold: 0.01
   # -------MODIFY-------  
   #Hash Range for Input (Input is the 4 temporal features)
-  inputHashRange: 750 #1000 ##
+  inputHashRange: 750 ##
   # _________  
 # -------MODIFY-------  
 #Sequence Length
-SEQUENCELENGTH: 200 
+SEQUENCELENGTH: 200 ##80 #100 #120 #
 # _________
 #Keras Model Parameters
 MODELPARAMS:
   #Emedding Layer Output Dimension
-  INPUT_EMBED_DIM: 512 #256 ##
+  INPUT_EMBED_DIM: 512 ##
   #LSTM Output Dimension
-  LSTM_DIM: 300 #256 ##
-  LSTM_DIM_Q: 300
+  LSTM_DIM: 300 ##
+  LSTM_DIM_Q: 300 ##
   #Adam Learning Rates
   LEARNING_RATE_P: 0.005 #0.001 ##
-  LEARNING_RATE_Q: 0.005 #0.002 #0.01 ##
+  LEARNING_RATE_Q: 0.003 #0.001 ##
 #Keras Training Parameters
 TRAININGPARAMS:
   #Number of Epochs to train for P
-  EPOCHS: 50 ##100
+  EPOCHS_P: 50 ##
+  EPOCHS_Q: 10 ##
   #Number of Epochs per interval during interval training of Q
-  INTERVALEPOCHS: 3
+  INTERVALEPOCHS: 5 ##
   #Whether Q Should have 2 Layers of LSTM. If false 1 layer will be used instead. If true 2 layer will be used.
   # -------MODIFY-------
-  2LAYERLSTMQ: True #False ##
+  2LAYERLSTMQ: True ##
   # _________
-  #Whether Q Should transfer All weights or not. If false only embedding will be trasnfered. If true, all layers will be transferred.
-  ALLLAYERTRANSFER: True #False ##
+  #Whether Q Should transfer All weights or not. If false only embedding will be transfered. If true, all layers will be transferred.
+  ALLLAYERTRANSFER: True ##False #
   #Batch size
-  BATCH_SIZE: 256 # 512(causes error for online training if too big batch) 
+  BATCH_SIZE: 256 # 512(not too big for online training. causes error if not enough data in the interval) #
   #Percentage of data to be used for training. (1 - Percentage) is for validation.
-  PERCENTAGETRAIN: 0.9 #0.8 #0.75 ##
+  PERCENTAGETRAIN: 0.8 ##
+  PERCENTAGETRAIN_Q: 0.9 ## offline Q
+  PERCENTAGETRAIN_QT: 1.0 ## online Q
   #Number of workers to use during training
   WORKERS: 24
   #Allow multiprocessing during training (Not sure what this does) True/False
   MULTIPROCESSING: True
 #Boolean if online training or not
-ONLINETRAINING: True #False #
+ONLINETRAINING: True ##

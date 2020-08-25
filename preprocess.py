@@ -279,7 +279,7 @@ def main():
 
     # if config['ONLINETRAINING'] :
     count = 0
-    for df_int in df_attack_intervals[:-5] :
+    for df_int in df_attack_intervals[:-config['metadata']['attackintervals']] :
         df_attack = prepDataFrame(df_int, config['variablesHash']['agentHashRange'], config['variablesHash']['queryHashRange'])
         # df_attack.to_csv(r'' + config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_' + str(count) + '(PreSequentialize).csv', index = None, header=True)
         df_attack = sequentializeDataFrame(df_attack, significantNormal, config['variablesHash']['inputHashRange'], config['SEQUENCELENGTH']) # add
@@ -291,7 +291,7 @@ def main():
     # else :
     df_attack_batch = []
     # count = 0
-    for df_int in df_attack_intervals[:-5] :
+    for df_int in df_attack_intervals[:-config['metadata']['attackintervals']] :
         df_attack = prepDataFrame(df_int, config['variablesHash']['agentHashRange'], config['variablesHash']['queryHashRange'])
         # df_attack.to_csv(r'' + config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_' + str(count) + '(PreSequentialize).csv', index = None, header=True)
         df_attack = sequentializeDataFrame(df_attack, significantNormal, config['variablesHash']['inputHashRange'], config['SEQUENCELENGTH']) # add
@@ -311,7 +311,7 @@ def main():
     # df_test.append(df_normal2) # remove?
 
     # A2 test set
-    for df_int in df_attack_intervals[-5:] :
+    for df_int in df_attack_intervals[-config['metadata']['attackintervals']:] :
         df_attack = prepDataFrame(df_int, config['variablesHash']['agentHashRange'], config['variablesHash']['queryHashRange'])
         # df_attack.to_csv(r'' + config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A2_' + str(count) + '(PreSequentialize).csv', index = None, header=True)
         df_attack = sequentializeDataFrame(df_attack, significantNormal, config['variablesHash']['inputHashRange'], config['SEQUENCELENGTH']) # add

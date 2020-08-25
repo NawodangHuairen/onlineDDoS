@@ -38,7 +38,6 @@ import hashlib
 import time
 import os
 from datagenerator import DataGenerator
-# from datagenerator_b import DataGenerator
 import random
 
 # import matplotlib.pyplot as plt # add
@@ -59,7 +58,8 @@ session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op
 session_conf.gpu_options.allow_growth = True # add
 
 sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
-K.set_session(sess)
+# tf.compat.v1.keras.backend.set_session(sess) # add
+# K.set_session(sess)
 
 def loadConfig():
     with open(sys.argv[1], "r") as ymlfile:
@@ -163,7 +163,7 @@ def trainModelP(size, max_len, vocab_size, config):
                         validation_data=validation_generator_uri_normal,
                         use_multiprocessing = config['TRAININGPARAMS']['MULTIPROCESSING'],
                         workers = config['TRAININGPARAMS']['WORKERS'],
-                        epochs = config['TRAININGPARAMS']['EPOCHS'],
+                        epochs = config['TRAININGPARAMS']['EPOCHS_P'],
                         callbacks=[EarlyStopping(monitor='val_loss',patience=9, mode='auto', min_delta=0.0001)])
 
     return modelP, historyP # add
@@ -181,18 +181,24 @@ def trainModelQ(size, max_len, vocab_size, config, fname, index=0, online=True):
     input_emb_dim = config['MODELPARAMS']['INPUT_EMBED_DIM']
     lstm_emb_dim = config['MODELPARAMS']['LSTM_DIM_Q']
     # Datasets generation
-    cut = math.ceil(size*config['TRAININGPARAMS']['PERCENTAGETRAIN'])
+    if online: # add
+        cut = math.ceil(size*config['TRAININGPARAMS']['PERCENTAGETRAIN_QT'])
+    else:
+        cut = math.ceil(size*config['TRAININGPARAMS']['PERCENTAGETRAIN_Q'])
     partition = dict()
     partition['train'] = []
     partition['validation'] = []
 
+    # if online: 
+    #     partition['train'] = np.arange(size).tolist()
+    # else:
     for i in range(cut):
         partition['train'].append(i)
 
     for i in range(cut, size) :
         partition['validation'].append(i)
 
-    # #Generators
+    # Generators
     # training_generator_uri_attack = DataGenerator(True, 0, partition['train'], **params)
     # validation_generator_uri_attack = DataGenerator(True, 0, partition['validation'], **params)
     training_generator_uri_attack = DataGenerator(True, index, partition['train'], **params)
@@ -242,8 +248,8 @@ def trainModelQ(size, max_len, vocab_size, config, fname, index=0, online=True):
         epoch = config['TRAININGPARAMS']['INTERVALEPOCHS']
         callback = []
     else :
-        epoch = config['TRAININGPARAMS']['EPOCHS']
-        callback = [EarlyStopping(monitor='val_loss',patience=9, mode='auto', min_delta=0.0001)]
+        epoch = config['TRAININGPARAMS']['EPOCHS_Q']
+        callback = [EarlyStopping(monitor='val_loss',patience=5, mode='auto', min_delta=0.0001)]
 
     historyQ = modelQ.fit_generator(generator=training_generator_uri_attack,
                         validation_data=validation_generator_uri_attack,
@@ -269,8 +275,9 @@ def updateModel(model, index, size, max_len, vocab_size, config, fname) :
 
     input_emb_dim = config['MODELPARAMS']['INPUT_EMBED_DIM']
     lstm_emb_dim = config['MODELPARAMS']['LSTM_DIM_Q']
+
     # Datasets generation
-    cut = math.floor(size*config['TRAININGPARAMS']['PERCENTAGETRAIN'])
+    cut = math.floor(size*config['TRAININGPARAMS']['PERCENTAGETRAIN_QT']) # add
     partition = dict()
     partition['train'] = []
     partition['validation'] = []
@@ -280,6 +287,7 @@ def updateModel(model, index, size, max_len, vocab_size, config, fname) :
 
     for i in range(cut, size) :
         partition['validation'].append(i)
+    # partition['train'] = np.arange(size).tolist()
 
     # Generators
     training_generator_uri_attack = DataGenerator(True, index, partition['train'], **params)
@@ -305,48 +313,48 @@ def main():
 
     df_normal = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'N1.csv')
     tokenizer_normal = getTokenizer(df_normal)
-    df_normal_embedded = df_normal.copy()
-    df_normal_embedded['Input'] = tokenizer_normal.texts_to_sequences(df_normal['Input'].values)
-    x_normal, y_normal = createGeneratorData(df_normal_embedded, tokenizer_normal, max_len)
+    
+    # df_normal_embedded = df_normal.copy()
+    # df_normal_embedded['Input'] = tokenizer_normal.texts_to_sequences(df_normal['Input'].values)
+    # x_normal, y_normal = createGeneratorData(df_normal_embedded, tokenizer_normal, max_len)
 
-    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURITraining.npy', x_normal)
-    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURILabel.npy', y_normal)
+    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURITraining.npy', x_normal)
+    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURILabel.npy', y_normal)
 
-
-    print("*****     Training Model P     ******")
+    # print("*****     Training Model P     ******")
     fname = "weights"
-    start = time.time()
-    # add historyP
-    modelP, historyP = trainModelP(len(df_normal), max_len, [len(tokenizer_normal.word_index)], config)
-    # modelP.save_weights(fname)
-    modelP.save_weights(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + fname)
-    print("Time to train Mode P is " + str(time.time() - start))
+    # start = time.time()
+    # # add historyP
+    # modelP, historyP = trainModelP(len(df_normal), max_len, [len(tokenizer_normal.word_index)], config)
+    # # modelP.save_weights(fname)
+    # modelP.save_weights(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + fname)
+    # print("Time to train Mode P is " + str(time.time() - start))
 
-    # add =========== Plot training acc and loss ===========
-    acc = historyP.history['acc']
-    val_acc = historyP.history['val_acc']
-    loss = historyP.history['loss']
-    val_loss = historyP.history['val_loss']
-    epochs = range(1, len(acc) + 1)
-    f = plt.figure(figsize=(15,5))
+    # # add =========== Plot training acc and loss ===========
+    # acc = historyP.history['acc']
+    # val_acc = historyP.history['val_acc']
+    # loss = historyP.history['loss']
+    # val_loss = historyP.history['val_loss']
+    # epochs = range(1, len(acc) + 1)
+    # f = plt.figure(figsize=(15,5))
 
-    ax1 = f.add_subplot(121)
-    ax1.set_xlabel('Epochs')
-    ax1.set_ylabel('Accuracy')
-    ax1.plot(epochs, acc, 'bo', label='Training acc')
-    ax1.plot(epochs, val_acc, 'b', label='Validation acc')
-    ax1.legend()
-    ax1.title.set_text('Training and validation accuracy')
+    # ax1 = f.add_subplot(121)
+    # ax1.set_xlabel('Epochs')
+    # ax1.set_ylabel('Accuracy')
+    # ax1.plot(epochs, acc, 'bo', label='Training acc')
+    # ax1.plot(epochs, val_acc, 'b', label='Validation acc')
+    # ax1.legend()
+    # ax1.title.set_text('Training and validation accuracy')
 
-    ax2 = f.add_subplot(122)
-    ax2.title.set_text('Generated Synthetic Graph')
-    ax2.set_xlabel('Epochs')
-    ax2.set_ylabel('Loss')
-    ax2.plot(epochs, loss, 'bo', label='Training loss')
-    ax2.plot(epochs, val_loss, 'b', label='Validation loss')
-    ax2.legend()
-    ax2.title.set_text('Training and validation loss')
-    f.savefig('./'+ config['metadata']['uniqueID'] +'/'+ config['metadata']['result'] + '_Ptraining.png')
+    # ax2 = f.add_subplot(122)
+    # ax2.title.set_text('Generated Synthetic Graph')
+    # ax2.set_xlabel('Epochs')
+    # ax2.set_ylabel('Loss')
+    # ax2.plot(epochs, loss, 'bo', label='Training loss')
+    # ax2.plot(epochs, val_loss, 'b', label='Validation loss')
+    # ax2.legend()
+    # ax2.title.set_text('Training and validation loss')
+    # f.savefig('./'+ config['metadata']['uniqueID'] +'/'+ config['metadata']['result'] + '_Ptraining.png')
 
 
 
@@ -361,6 +369,7 @@ def main():
             break
         df_attack = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_' + str(count) + '.csv')
         tokenizer_attack = tokenizer_normal
+
         df_attack_embedded = df_attack.copy()
         df_attack_embedded['Input'] = tokenizer_attack.texts_to_sequences(df_attack['Input'].values)
         x_attack, y_attack = createGeneratorData(df_attack_embedded, tokenizer_attack, max_len)
@@ -369,14 +378,17 @@ def main():
         lengths.append(len(df_attack))
         count = count + 1
 
-    # Offline Q data
-    df_attackfull = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_full.csv')
-    tokenizer_attack = tokenizer_normal
-    df_attackfull_embedded = df_attackfull.copy()
-    df_attackfull_embedded['Input'] = tokenizer_attack.texts_to_sequences(df_attackfull['Input'].values)
-    x_attackfull, y_attackfull = createGeneratorData(df_attackfull_embedded, tokenizer_attack, max_len)
-    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURITraining_full.npy', x_attackfull)
-    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURILabel_full.npy', y_attackfull)
+    # # Offline Q data
+    # df_attackfull = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_full.csv')
+    # tokenizer_attack = tokenizer_normal
+    # df_attackfull_embedded = df_attackfull.copy()
+    # df_attackfull_embedded['Input'] = tokenizer_attack.texts_to_sequences(df_attackfull['Input'].values)
+    # # Shuffle the df
+    # df_attackfull_embedded = df_attackfull_embedded.sample(frac=1).reset_index(drop=True)
+
+    # x_attackfull, y_attackfull = createGeneratorData(df_attackfull_embedded, tokenizer_attack, max_len)
+    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURITraining_full.npy', x_attackfull)
+    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURILabel_full.npy', y_attackfull)
 
 
 
@@ -387,7 +399,8 @@ def main():
 
     start = time.time()
     # add historyQT 
-    modelQT, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname)
+    # modelQT, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname)
+    modelQT, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname, index=0, online=True)
     print("Time to train Mode Q is " + str(time.time() - start))
     timeArrayWithEmbed.append(time.time() - start)
     lossArrayWithEmbed.append(loss)
@@ -402,66 +415,68 @@ def main():
         timeA = time.time() - start
         timeArrayWithEmbed.append(timeA)
         lossArrayWithEmbed.append(loss)
-        accArrayWithEmbed.append(acc)
+        accArrayWithEmbed.append(acc)    
 
 
 
 
-    print("*****     Training Model Q  (Offline no transfer)   ******")
+    # print("*****     Training Model Q  (Offline no transfer)   ******")
 
-    start = time.time()
-    # add historyQ 
-    modelQ, loss, _, historyQ = trainModelQ(len(df_attackfull), max_len, [len(tokenizer_attack.word_index)], config, None, index=None, online=False)
-    print("Time to train Mode Q is " + str(time.time() - start))
+    # start = time.time()
+    # # add historyQ 
+    # # modelQ, loss, _, historyQ = trainModelQ(len(df_attackfull), max_len, [len(tokenizer_attack.word_index)], config, None, index=None, online=False) # no transfer
+    # modelQ, loss, _, historyQ = trainModelQ(len(df_attackfull), max_len, [len(tokenizer_attack.word_index)], config, fname, index=None, online=False) # transfer learning 
+    # print("Time to train Mode Q is " + str(time.time() - start))
 
-    # add =========== Plot training acc and loss ===========
-    acc = historyQ.history['acc']
-    val_acc = historyQ.history['val_acc']
-    loss = historyQ.history['loss']
-    val_loss = historyQ.history['val_loss']
-    epochs = range(1, len(acc) + 1)
-    f = plt.figure(figsize=(15,5))
+    # # add =========== Plot training acc and loss ===========
+    # acc = historyQ.history['acc']
+    # val_acc = historyQ.history['val_acc']
+    # loss = historyQ.history['loss']
+    # val_loss = historyQ.history['val_loss']
+    # epochs = range(1, len(acc) + 1)
+    # f = plt.figure(figsize=(15,5))
 
-    ax1 = f.add_subplot(121)
-    ax1.set_xlabel('Epochs')
-    ax1.set_ylabel('Accuracy')
-    ax1.plot(epochs, acc, 'bo', label='Training acc')
-    ax1.plot(epochs, val_acc, 'b', label='Validation acc')
-    ax1.legend()
-    ax1.title.set_text('Training and validation accuracy')
+    # ax1 = f.add_subplot(121)
+    # ax1.set_xlabel('Epochs')
+    # ax1.set_ylabel('Accuracy')
+    # ax1.plot(epochs, acc, 'bo', label='Training acc')
+    # ax1.plot(epochs, val_acc, 'b', label='Validation acc')
+    # ax1.legend()
+    # ax1.title.set_text('Training and validation accuracy')
 
-    ax2 = f.add_subplot(122)
-    ax2.title.set_text('Generated Synthetic Graph')
-    ax2.set_xlabel('Epochs')
-    ax2.set_ylabel('Loss')
-    ax2.plot(epochs, loss, 'bo', label='Training loss')
-    ax2.plot(epochs, val_loss, 'b', label='Validation loss')
-    ax2.legend()
-    ax2.title.set_text('Training and validation loss')
-    # f.savefig('./'+ config['metadata']['uniqueID']+'/train_Q_1lstmlayer.png')
-    f.savefig('./'+ config['metadata']['uniqueID'] +'/'+ config['metadata']['result'] + '_offlineQtraining.png')
+    # ax2 = f.add_subplot(122)
+    # ax2.title.set_text('Generated Synthetic Graph')
+    # ax2.set_xlabel('Epochs')
+    # ax2.set_ylabel('Loss')
+    # ax2.plot(epochs, loss, 'bo', label='Training loss')
+    # ax2.plot(epochs, val_loss, 'b', label='Validation loss')
+    # ax2.legend()
+    # ax2.title.set_text('Training and validation loss')
+    # # f.savefig('./'+ config['metadata']['uniqueID']+'/train_Q_1lstmlayer.png')
+    # f.savefig('./'+ config['metadata']['uniqueID'] +'/'+ config['metadata']['result'] + '_offlineQtraining.png')
 
 
     # # #Save loss/time taken data in output.csv
     # df = pd.DataFrame(data={"col1":timeArrayWithEmbed, "col2":accArrayWithEmbed , "col3":lossArrayWithEmbed})
     # df.to_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + 'onlineQtraining_output.csv', sep=',',index=False)
 
-    modelP.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelP')
+    # modelP.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelP')
     modelQT.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQWithTransfer')
-    modelQ.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQWithoutTransfer')
+    # modelQ.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQWithoutTransfer')
 
-    # saving normal
-    with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_normal.pickle', 'wb') as handle:
-        pickle.dump(tokenizer_normal, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # # saving normal
+    # with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_normal.pickle', 'wb') as handle:
+    #     pickle.dump(tokenizer_normal, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # saving attack
-    with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_attack.pickle', 'wb') as handle:
-        pickle.dump(tokenizer_attack, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # # saving attack
+    # with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_attack.pickle', 'wb') as handle:
+    #     pickle.dump(tokenizer_attack, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    K.clear_session()
-
+    # K.clear_session()
+    tf.compat.v1.keras.backend.clear_session() # add
 
     print("*****     Ending Training     ******")
 
 if __name__ == "__main__":
     main()
+

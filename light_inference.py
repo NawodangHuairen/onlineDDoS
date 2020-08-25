@@ -98,6 +98,7 @@ def calcProbability(maxlen, p_pred_normal, y_test)  :
         if (y_test[i] != 0) :
             # p_sentence = p_sentence + math.log(p_pred_normal[i][y_test[i]])
             p_sentence = p_sentence + math.log(p_pred_normal[i]) # add
+            # p_sentence = p_sentence * p_pred_normal[i] # add
 
     return p_sentence
 
@@ -121,7 +122,7 @@ def calcHisto(pair, agent, country, histogram, agenthistogram, countryhistogram,
         print(p_agent)
         print(p_country)
 
-    return math.log(final_p_hist)
+    return math.log(final_p_hist) #final_p_hist #
 
 # This might give the probability as 0
 def getHistogramProbability(histogram, value, datasize):
@@ -239,29 +240,39 @@ def calculateSequenceScores(modelP, modelQWithT, modelQWithoutT, tokenizer_norma
     df_temp['hist2'] = df_temp.apply(lambda x: calcHisto(x["Histo"], x["Protocols"], x["Info"], CountryAgentHistogram_Attack, CountryHistogram_Attack, AgentHistogram_Attack, atk_size),axis=1)
     df_temp['QWithoutT_LSTM'] = df_temp.apply(lambda x: calcProbability(maxlen, x['QWithoutTint'], x['Qy']),axis=1)
 
-    #Sorting to avoid mixing of IP and Scores
-    df_temp = df_temp.sort_values(by = ['P_LSTM'])#, ignore_index = True)
-    df_temp = df_temp.reset_index(drop=True) # add
+    # #Sorting to avoid mixing of IP and Scores
+    # df_temp = df_temp.sort_values(by = ['P_LSTM'])#, ignore_index = True)
+    # df_temp = df_temp.reset_index(drop=True) # add
 
     # add #No Scaling 
     df_min_max = deepcopy(df_temp[['P_LSTM','hist1', 'QWithT_LSTM', 'QWithoutT_LSTM' ,'hist2']]) #, 'QTilde']])
     df_min_max['Source IP'] = df_temp['Source IP']
     df_min_max['Dest IP'] = df_temp['Dest IP']
+    # #Sorting to avoid mixing of IP and Scores
+    # df_min_max = df_min_max.sort_values(by = ['P_LSTM'])#, ignore_index = True)
+    # df_min_max = df_min_max.reset_index(drop=True) # add        
 
     # Computation of scores 
     df_min_max = df_min_max.rename(columns={0: 'P_LSTM', 1: 'hist1', 2: 'QWithT_LSTM', 3: 'QWithoutT_LSTM', 4: 'hist2'}) #, 5: 'QTilde'})
-    df_min_max['P'] = df_min_max['P_LSTM'] + df_min_max['hist1']
-    df_min_max['QWithT'] = df_min_max['QWithT_LSTM'] + df_min_max['hist2']
-    df_min_max['QWithoutT'] = df_min_max['QWithoutT_LSTM'] + df_min_max['hist2']
-    df_min_max['PoverQWithTransfer'] = df_min_max['P'] - df_min_max['QWithT']
-    df_min_max['PoverQWithoutTransfer'] = df_min_max['P'] - df_min_max['QWithoutT']
+    df_min_max['P'] = (df_min_max['P_LSTM'] + df_min_max['hist1']) #+1).apply(lambda x: math.log(x))
+    df_min_max['QWithT'] = (df_min_max['QWithT_LSTM'] + df_min_max['hist2']) #+1).apply(lambda x: math.log(x))
+    df_min_max['QWithoutT'] = (df_min_max['QWithoutT_LSTM'] + df_min_max['hist2']) #+1).apply(lambda x: math.log(x))
+    # # add standardization
+    # df_min_max['P'] = (df_min_max['P'] - df_min_max['P'].min(axis=0)) / (df_min_max['P'].max(axis=0) - df_min_max['P'].min(axis=0))
+    # df_min_max['QWithT'] = (df_min_max['QWithT'] - df_min_max['QWithT'].min(axis=0)) / (df_min_max['QWithT'].max(axis=0) - df_min_max['QWithT'].min(axis=0))
+    # df_min_max['QWithoutT'] = (df_min_max['QWithoutT'] - df_min_max['QWithoutT'].min(axis=0)) / (df_min_max['QWithoutT'].max(axis=0) - df_min_max['QWithoutT'].min(axis=0))    
+    
+    df_min_max['PoverQWithTransfer'] = df_min_max['P'] - df_min_max['QWithT'] # 
+    df_min_max['PoverQWithoutTransfer'] = df_min_max['P'] - df_min_max['QWithoutT'] # 
+    
+
 
     #Calculate time taken for inference
     print("End inference in {:.2f} seconds".format(time.time() - start))
 
     sr = df_min_max[['Source IP', 'Dest IP', 'P', 'PoverQWithTransfer','PoverQWithoutTransfer', 'QWithT', 'QWithoutT']] #, 'PoverQTilde']]
     # print('c4')
-    sr.reset_index(inplace=True)
+    # sr.reset_index(inplace=True)
     # print('/////////////////')
     return sr
 
