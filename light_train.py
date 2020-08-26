@@ -48,7 +48,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 #Disable randomization
-seed_value=10 #
+seed_value=2020 #10 #
 
 os.environ['PYTHONHASHSEED'] = str(seed_value)
 np.random.seed(seed_value)
@@ -316,21 +316,21 @@ def main():
     df_normal = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'N1.csv')
     tokenizer_normal = getTokenizer(df_normal)
     
-    # df_normal_embedded = df_normal.copy()
-    # df_normal_embedded['Input'] = tokenizer_normal.texts_to_sequences(df_normal['Input'].values)
-    # x_normal, y_normal = createGeneratorData(df_normal_embedded, tokenizer_normal, max_len)
+    df_normal_embedded = df_normal.copy()
+    df_normal_embedded['Input'] = tokenizer_normal.texts_to_sequences(df_normal['Input'].values)
+    x_normal, y_normal = createGeneratorData(df_normal_embedded, tokenizer_normal, max_len)
 
-    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURITraining.npy', x_normal)
-    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURILabel.npy', y_normal)
+    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURITraining.npy', x_normal)
+    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURILabel.npy', y_normal)
 
-    # print("*****     Training Model P     ******")
+    print("*****     Training Model P     ******")
     fname = "weights"
-    # start = time.time()
-    # # add historyP
-    # modelP, historyP = trainModelP(len(df_normal), max_len, [len(tokenizer_normal.word_index)], config)
-    # # modelP.save_weights(fname)
-    # modelP.save_weights(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + fname)
-    # print("Time to train Mode P is " + str(time.time() - start))
+    start = time.time()
+    # add historyP
+    modelP, historyP = trainModelP(len(df_normal), max_len, [len(tokenizer_normal.word_index)], config)
+    # modelP.save_weights(fname)
+    modelP.save_weights(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + fname)
+    print("Time to train Mode P is " + str(time.time() - start))
 
     # # add =========== Plot training acc and loss ===========
     # acc = historyP.history['acc']
@@ -363,22 +363,22 @@ def main():
 
     print("*****     Preparing Model Q     ******")
 
-    # # Online Q interval data
-    # count = 0
-    # lengths = []
-    # while(True) :
-    #     if not os.path.isfile(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_' + str(count) + '.csv') :
-    #         break
-    #     df_attack = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_' + str(count) + '.csv')
-    #     tokenizer_attack = tokenizer_normal
+    # Online Q interval data
+    count = 0
+    lengths = []
+    while(True) :
+        if not os.path.isfile(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_' + str(count) + '.csv') :
+            break
+        df_attack = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_' + str(count) + '.csv')
+        tokenizer_attack = tokenizer_normal
 
-    #     df_attack_embedded = df_attack.copy()
-    #     df_attack_embedded['Input'] = tokenizer_attack.texts_to_sequences(df_attack['Input'].values)
-    #     x_attack, y_attack = createGeneratorData(df_attack_embedded, tokenizer_attack, max_len)
-    #     np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURITraining_' + str(count) + '.npy', x_attack)
-    #     np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURILabel_' + str(count) + '.npy', y_attack)
-    #     lengths.append(len(df_attack))
-    #     count = count + 1
+        df_attack_embedded = df_attack.copy()
+        df_attack_embedded['Input'] = tokenizer_attack.texts_to_sequences(df_attack['Input'].values)
+        x_attack, y_attack = createGeneratorData(df_attack_embedded, tokenizer_attack, max_len)
+        np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURITraining_' + str(count) + '.npy', x_attack)
+        np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURILabel_' + str(count) + '.npy', y_attack)
+        lengths.append(len(df_attack))
+        count = count + 1
 
     # Offline Q data
     df_attackfull = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_full.csv')
@@ -394,30 +394,30 @@ def main():
 
 
 
-    # print("*****     Training Model Q  (Online with Embedding Transfer)   ******")
-    # timeArrayWithEmbed = []
-    # lossArrayWithEmbed = []
-    # accArrayWithEmbed = []
+    print("*****     Training Model Q  (Online with Embedding Transfer)   ******")
+    timeArrayWithEmbed = []
+    lossArrayWithEmbed = []
+    accArrayWithEmbed = []
 
-    # start = time.time()
-    # # add historyQT 
-    # # modelQT, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname)
-    # modelQ_online, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname, index=0, online=True)
-    # print("Time to train Mode Q is " + str(time.time() - start))
-    # timeArrayWithEmbed.append(time.time() - start)
-    # lossArrayWithEmbed.append(loss)
-    # accArrayWithEmbed.append(acc)
+    start = time.time()
+    # add historyQT 
+    # modelQT, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname)
+    modelQ_online, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname, index=0, online=True)
+    print("Time to train Mode Q is " + str(time.time() - start))
+    timeArrayWithEmbed.append(time.time() - start)
+    lossArrayWithEmbed.append(loss)
+    accArrayWithEmbed.append(acc)
 
-    # print("*****     Updating Model Q  (With Embedding Transfer)   ******")
-    # for i in range(1, count, 1) :
-    #     print("*****     Updating Model Q  with time interval " + str(i) + "   ******")
+    print("*****     Updating Model Q  (With Embedding Transfer)   ******")
+    for i in range(1, count, 1) :
+        print("*****     Updating Model Q  with time interval " + str(i) + "   ******")
 
-    #     start = time.time()
-    #     modelQ_online, loss, acc = updateModel(modelQ_online, i, lengths[i], max_len, [len(tokenizer_attack.word_index)], config, fname)
-    #     timeA = time.time() - start
-    #     timeArrayWithEmbed.append(timeA)
-    #     lossArrayWithEmbed.append(loss)
-    #     accArrayWithEmbed.append(acc)    
+        start = time.time()
+        modelQ_online, loss, acc = updateModel(modelQ_online, i, lengths[i], max_len, [len(tokenizer_attack.word_index)], config, fname)
+        timeA = time.time() - start
+        timeArrayWithEmbed.append(timeA)
+        lossArrayWithEmbed.append(loss)
+        accArrayWithEmbed.append(acc)    
 
 
 
@@ -462,17 +462,17 @@ def main():
     # df = pd.DataFrame(data={"col1":timeArrayWithEmbed, "col2":accArrayWithEmbed , "col3":lossArrayWithEmbed})
     # df.to_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + 'onlineQtraining_output.csv', sep=',',index=False)
 
-    # modelP.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelP')
-    # modelQ_online.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQ_online') 
+    modelP.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelP')
+    modelQ_online.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQ_online') 
     modelQ_offline.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQ_offline') 
 
-    # # saving normal
-    # with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_normal.pickle', 'wb') as handle:
-    #     pickle.dump(tokenizer_normal, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # saving normal
+    with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_normal.pickle', 'wb') as handle:
+        pickle.dump(tokenizer_normal, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # # saving attack
-    # with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_attack.pickle', 'wb') as handle:
-    #     pickle.dump(tokenizer_attack, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # saving attack
+    with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_attack.pickle', 'wb') as handle:
+        pickle.dump(tokenizer_attack, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     K.clear_session()
 

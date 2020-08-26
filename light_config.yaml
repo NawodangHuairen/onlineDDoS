@@ -57,7 +57,7 @@ TRAININGPARAMS:
   EPOCHS_P: 30 ##
   EPOCHS_Q: 10 ## 
   #Number of Epochs per interval during interval training of Q
-  INTERVALEPOCHS: 3 ## 5
+  INTERVALEPOCHS: 5 ##3
   #Whether Q Should have 2 Layers of LSTM. If false 1 layer will be used instead. If true 2 layer will be used.
   # -------MODIFY-------
   2LAYERLSTMQ: True ##

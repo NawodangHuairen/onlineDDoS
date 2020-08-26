@@ -40,7 +40,7 @@ import os
 from datagenerator import DataGenerator
 
 #Disable randomization
-seed_value=10 #
+seed_value=2020 #
 
 os.environ['PYTHONHASHSEED'] = str(seed_value)
 np.random.seed(seed_value)
