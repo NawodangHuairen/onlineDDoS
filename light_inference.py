@@ -270,6 +270,7 @@ def calculateSequenceScores(modelP, modelQWithT, modelQWithoutT, tokenizer_norma
     df_min_max['P'] = (df_min_max['P_LSTM'] + df_min_max['hist1']) #+1).apply(lambda x: math.log(x))
     df_min_max['QWithT'] = (df_min_max['QWithT_LSTM'] + df_min_max['hist2']) #+1).apply(lambda x: math.log(x))
     df_min_max['QWithoutT'] = (df_min_max['QWithoutT_LSTM'] + df_min_max['hist2']) #+1).apply(lambda x: math.log(x))
+
     # # add standardization
     # df_min_max['P'] = (df_min_max['P'] - df_min_max['P'].min(axis=0)) / (df_min_max['P'].max(axis=0) - df_min_max['P'].min(axis=0))
     # df_min_max['QWithT'] = (df_min_max['QWithT'] - df_min_max['QWithT'].min(axis=0)) / (df_min_max['QWithT'].max(axis=0) - df_min_max['QWithT'].min(axis=0))
@@ -278,8 +279,6 @@ def calculateSequenceScores(modelP, modelQWithT, modelQWithoutT, tokenizer_norma
     df_min_max['PoverQ_online'] = df_min_max['P'] - df_min_max['QWithT'] # 
     df_min_max['PoverQ_offline'] = df_min_max['P'] - df_min_max['QWithoutT'] # 
     
-
-
     #Calculate time taken for inference
     print("End inference in {:.2f} seconds".format(time.time() - start))
 
