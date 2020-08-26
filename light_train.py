@@ -30,7 +30,8 @@ from keras.utils.np_utils import to_categorical
 from keras.callbacks import EarlyStopping
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from tensorflow.compat.v1.keras import backend as K
+# from tensorflow.compat.v1.keras import backend as K
+from keras import backend as K # add
 
 import datetime
 import math
@@ -46,20 +47,21 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-seed_value= 10
+#Disable randomization
+seed_value=10 #
 
-#Disable randomisation
-os.environ['PYTHONHASHSEED']=str(seed_value)
+os.environ['PYTHONHASHSEED'] = str(seed_value)
 np.random.seed(seed_value)
-random.seed(seed_value)
+# tf.set_random_seed(seed_value)
 tf.compat.v1.set_random_seed(seed_value)
+random.seed(seed_value)
+
 session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
-
 session_conf.gpu_options.allow_growth = True # add
-
 sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
 # tf.compat.v1.keras.backend.set_session(sess) # add
-# K.set_session(sess)
+K.set_session(sess)
+
 
 def loadConfig():
     with open(sys.argv[1], "r") as ymlfile:
@@ -164,7 +166,7 @@ def trainModelP(size, max_len, vocab_size, config):
                         use_multiprocessing = config['TRAININGPARAMS']['MULTIPROCESSING'],
                         workers = config['TRAININGPARAMS']['WORKERS'],
                         epochs = config['TRAININGPARAMS']['EPOCHS_P'],
-                        callbacks=[EarlyStopping(monitor='val_loss',patience=9, mode='auto', min_delta=0.0001)])
+                        callbacks=[EarlyStopping(monitor='val_loss',patience=5, mode='auto', min_delta=0.0001)])
 
     return modelP, historyP # add
 
@@ -309,26 +311,26 @@ def main():
     config = loadConfig()
     max_len = config['SEQUENCELENGTH']
 
-    # print("*****     Preparing Model P     ******")
+    print("*****     Preparing Model P     ******")
 
     df_normal = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'N1.csv')
     tokenizer_normal = getTokenizer(df_normal)
     
-    # df_normal_embedded = df_normal.copy()
-    # df_normal_embedded['Input'] = tokenizer_normal.texts_to_sequences(df_normal['Input'].values)
-    # x_normal, y_normal = createGeneratorData(df_normal_embedded, tokenizer_normal, max_len)
+    df_normal_embedded = df_normal.copy()
+    df_normal_embedded['Input'] = tokenizer_normal.texts_to_sequences(df_normal['Input'].values)
+    x_normal, y_normal = createGeneratorData(df_normal_embedded, tokenizer_normal, max_len)
 
-    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURITraining.npy', x_normal)
-    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURILabel.npy', y_normal)
+    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURITraining.npy', x_normal)
+    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'normalURILabel.npy', y_normal)
 
-    # print("*****     Training Model P     ******")
+    print("*****     Training Model P     ******")
     fname = "weights"
-    # start = time.time()
-    # # add historyP
-    # modelP, historyP = trainModelP(len(df_normal), max_len, [len(tokenizer_normal.word_index)], config)
-    # # modelP.save_weights(fname)
-    # modelP.save_weights(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + fname)
-    # print("Time to train Mode P is " + str(time.time() - start))
+    start = time.time()
+    # add historyP
+    modelP, historyP = trainModelP(len(df_normal), max_len, [len(tokenizer_normal.word_index)], config)
+    # modelP.save_weights(fname)
+    modelP.save_weights(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + fname)
+    print("Time to train Mode P is " + str(time.time() - start))
 
     # # add =========== Plot training acc and loss ===========
     # acc = historyP.history['acc']
@@ -378,17 +380,17 @@ def main():
         lengths.append(len(df_attack))
         count = count + 1
 
-    # # Offline Q data
-    # df_attackfull = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_full.csv')
-    # tokenizer_attack = tokenizer_normal
-    # df_attackfull_embedded = df_attackfull.copy()
-    # df_attackfull_embedded['Input'] = tokenizer_attack.texts_to_sequences(df_attackfull['Input'].values)
-    # # Shuffle the df
-    # df_attackfull_embedded = df_attackfull_embedded.sample(frac=1).reset_index(drop=True)
+    # Offline Q data
+    df_attackfull = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'A1_full.csv')
+    tokenizer_attack = tokenizer_normal
+    df_attackfull_embedded = df_attackfull.copy()
+    df_attackfull_embedded['Input'] = tokenizer_attack.texts_to_sequences(df_attackfull['Input'].values)
+    # Shuffle the df
+    df_attackfull_embedded = df_attackfull_embedded.sample(frac=1).reset_index(drop=True)
 
-    # x_attackfull, y_attackfull = createGeneratorData(df_attackfull_embedded, tokenizer_attack, max_len)
-    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURITraining_full.npy', x_attackfull)
-    # np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURILabel_full.npy', y_attackfull)
+    x_attackfull, y_attackfull = createGeneratorData(df_attackfull_embedded, tokenizer_attack, max_len)
+    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURITraining_full.npy', x_attackfull)
+    np.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'attackURILabel_full.npy', y_attackfull)
 
 
 
@@ -400,7 +402,7 @@ def main():
     start = time.time()
     # add historyQT 
     # modelQT, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname)
-    modelQT, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname, index=0, online=True)
+    modelQ_online, loss, acc, _ = trainModelQ(lengths[0], max_len, [len(tokenizer_attack.word_index)], config, fname, index=0, online=True)
     print("Time to train Mode Q is " + str(time.time() - start))
     timeArrayWithEmbed.append(time.time() - start)
     lossArrayWithEmbed.append(loss)
@@ -411,7 +413,7 @@ def main():
         print("*****     Updating Model Q  with time interval " + str(i) + "   ******")
 
         start = time.time()
-        modelQT, loss, acc = updateModel(modelQT, i, lengths[i], max_len, [len(tokenizer_attack.word_index)], config, fname)
+        modelQ_online, loss, acc = updateModel(modelQ_online, i, lengths[i], max_len, [len(tokenizer_attack.word_index)], config, fname)
         timeA = time.time() - start
         timeArrayWithEmbed.append(timeA)
         lossArrayWithEmbed.append(loss)
@@ -420,13 +422,13 @@ def main():
 
 
 
-    # print("*****     Training Model Q  (Offline no transfer)   ******")
+    print("*****     Training Model Q  (Offline no transfer)   ******")
 
-    # start = time.time()
-    # # add historyQ 
-    # # modelQ, loss, _, historyQ = trainModelQ(len(df_attackfull), max_len, [len(tokenizer_attack.word_index)], config, None, index=None, online=False) # no transfer
-    # modelQ, loss, _, historyQ = trainModelQ(len(df_attackfull), max_len, [len(tokenizer_attack.word_index)], config, fname, index=None, online=False) # transfer learning 
-    # print("Time to train Mode Q is " + str(time.time() - start))
+    start = time.time()
+    # add historyQ 
+    # modelQ, loss, _, historyQ = trainModelQ(len(df_attackfull), max_len, [len(tokenizer_attack.word_index)], config, None, index=None, online=False) # no transfer
+    modelQ_offline, loss, _, historyQ_offline = trainModelQ(len(df_attackfull), max_len, [len(tokenizer_attack.word_index)], config, fname, index=None, online=False) # transfer learning 
+    print("Time to train Model Q offline is " + str(time.time() - start))
 
     # # add =========== Plot training acc and loss ===========
     # acc = historyQ.history['acc']
@@ -460,20 +462,19 @@ def main():
     # df = pd.DataFrame(data={"col1":timeArrayWithEmbed, "col2":accArrayWithEmbed , "col3":lossArrayWithEmbed})
     # df.to_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + 'onlineQtraining_output.csv', sep=',',index=False)
 
-    # modelP.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelP')
-    modelQT.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQWithTransfer')
-    # modelQ.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQWithoutTransfer')
+    modelP.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelP')
+    modelQ_online.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQ_online') 
+    modelQ_offline.save(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQ_offline') 
 
-    # # saving normal
-    # with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_normal.pickle', 'wb') as handle:
-    #     pickle.dump(tokenizer_normal, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # saving normal
+    with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_normal.pickle', 'wb') as handle:
+        pickle.dump(tokenizer_normal, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # # saving attack
-    # with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_attack.pickle', 'wb') as handle:
-    #     pickle.dump(tokenizer_attack, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    # saving attack
+    with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_attack.pickle', 'wb') as handle:
+        pickle.dump(tokenizer_attack, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # K.clear_session()
-    tf.compat.v1.keras.backend.clear_session() # add
+    K.clear_session()
 
     print("*****     Ending Training     ******")
 

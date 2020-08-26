@@ -87,13 +87,13 @@ def main():
     userScoreP = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PScore', 'rb'))
     userScoreP = userScoreP.sort_values(by = ['P'],ascending=False) # add
     
-    # userScorePQ  = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'POverQWithTransferScore', 'rb'))
-    userScorePQ = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'POverQWithTransferScore', 'rb'))
-    userScorePQ = userScorePQ.sort_values(by = ['PoverQWithTransfer'],ascending=False) # add 
+    # userScorePQ_online  = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'POverQWithTransferScore', 'rb'))
+    userScorePQ_online = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PoverQonline_score', 'rb'))
+    userScorePQ_online = userScorePQ_online.sort_values(by = ['PoverQ_online'],ascending=False) # add 
 
-    # userScorePQTil = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'POverQWithoutTransferScore', 'rb'))
-    userScorePQTil = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'POverQWithoutTransferScore', 'rb'))
-    userScorePQTil = userScorePQTil.sort_values(by = ['PoverQWithoutTransfer'],ascending=False) 
+    # userScorePQ_offline = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'POverQWithoutTransferScore', 'rb'))
+    userScorePQ_offline = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PoverQoffline_score', 'rb'))
+    userScorePQ_offline = userScorePQ_offline.sort_values(by = ['PoverQ_offline'],ascending=False) 
 
     userScoreQonline = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'onlineQ', 'rb'))
     userScoreQonline = userScoreQonline.sort_values(by = ['QWithT'],ascending=False)
@@ -107,7 +107,8 @@ def main():
     print("Length of userScoreP: ", len(userScoreP))
         
     for (IP, IPD, score) in list(userScoreP.itertuples(index=False, name=None)):
-        if IP != '172.16.0.1' and IP == '192.168.10.50': # equivalent to (if IP == '192.168.10.50')
+        # if IP != '172.16.0.1' and IP == '192.168.10.50': # equivalent to (if IP == '192.168.10.50')
+        if (IP != '172.16.0.1' and IPD=='192.168.10.50') or IP == '192.168.10.50':
             trueNormals.append(IP + IPD)
 
     print("Length of trueNormals: ", len(trueNormals))
@@ -117,23 +118,33 @@ def main():
 
     num = len(trueNormals)
 
-    graphPQ = calculateFalsePositives(trueNormals, userScorePQ, percentages, num)
     graphP = calculateFalsePositives(trueNormals, userScoreP, percentages, num)
-    graphPQTil = calculateFalsePositives(trueNormals, userScorePQTil, percentages, num)
+    graphPQ_online = calculateFalsePositives(trueNormals, userScorePQ_online, percentages, num)
+    graphPQ_offline = calculateFalsePositives(trueNormals, userScorePQ_offline, percentages, num)
     graphQonline = calculateFalsePositives(trueNormals, userScoreQonline, percentages, num)
     graphQoffline = calculateFalsePositives(trueNormals, userScoreQoffline, percentages, num)    
     
     
-    # print("graphPQ: ", graphPQ)
+    # print("graphPQ_online: ", graphPQ_online)
     
-    graphPQ.insert(0, 0)
+    graphPQ_online.insert(0, 0)
     graphP.insert(0, 0)
-    graphPQTil.insert(0, 0)
+    graphPQ_offline.insert(0, 0)
     graphQonline.insert(0, 0)
     graphQoffline.insert(0, 0)
     
-    plotAndSaveGraph(graphPQ, graphP, graphPQTil, graphQonline, graphQoffline, config)
-    # plotAndSaveGraph(graphPQ, graphP, config)
+    plotAndSaveGraph(graphPQ_online, graphP, graphPQ_offline, graphQonline, graphQoffline, config)
+    # plotAndSaveGraph(graphPQ_online, graphP, config)
+
+    # add Save FP results in csv 
+    graphP = np.array(graphP)
+    graphPQ_online= np.array(graphPQ_online)
+    graphPQ_offline= np.array(graphPQ_offline)
+
+    df_FPresults = pd.DataFrame({"P" : graphP, "Online Q" : graphPQ_online, "Offline Q" : graphPQ_offline})
+    df_FPresults.to_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + 
+                    "_FP_finalresults.csv", index=False)
+
 
     print("*****     Ending Evaluation     ******")
 

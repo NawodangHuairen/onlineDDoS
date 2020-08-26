@@ -54,7 +54,7 @@ MODELPARAMS:
 #Keras Training Parameters
 TRAININGPARAMS:
   #Number of Epochs to train for P
-  EPOCHS_P: 50 ##
+  EPOCHS_P: 30 ##
   EPOCHS_Q: 10 ##
   #Number of Epochs per interval during interval training of Q
   INTERVALEPOCHS: 5 ##
@@ -69,7 +69,7 @@ TRAININGPARAMS:
   #Percentage of data to be used for training. (1 - Percentage) is for validation.
   PERCENTAGETRAIN: 0.8 ##
   PERCENTAGETRAIN_Q: 0.9 ## offline Q
-  PERCENTAGETRAIN_QT: 1.0 ## online Q
+  PERCENTAGETRAIN_QT: 1.0 ## online Q 
   #Number of workers to use during training
   WORKERS: 24
   #Allow multiprocessing during training (Not sure what this does) True/False

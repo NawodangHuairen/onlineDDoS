@@ -39,11 +39,24 @@ import time
 import os
 from datagenerator import DataGenerator
 
-# add
-config = tf.ConfigProto() 
-config.gpu_options.allow_growth = True 
-# # sess = tf.Session(config=config) 
-sess = tf.compat.v1.Session(config=config) 
+#Disable randomization
+seed_value=10 #
+
+os.environ['PYTHONHASHSEED'] = str(seed_value)
+np.random.seed(seed_value)
+tf.compat.v1.set_random_seed(seed_value)
+
+session_conf = tf.compat.v1.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+session_conf.gpu_options.allow_growth = True # add
+sess = tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph(), config=session_conf)
+# tf.compat.v1.keras.backend.set_session(sess) # add
+K.set_session(sess)
+
+# # add
+# config = tf.ConfigProto() 
+# config.gpu_options.allow_growth = True 
+# # # sess = tf.Session(config=config) 
+# sess = tf.compat.v1.Session(config=config) 
 
 
 def loadConfig():
@@ -262,15 +275,15 @@ def calculateSequenceScores(modelP, modelQWithT, modelQWithoutT, tokenizer_norma
     # df_min_max['QWithT'] = (df_min_max['QWithT'] - df_min_max['QWithT'].min(axis=0)) / (df_min_max['QWithT'].max(axis=0) - df_min_max['QWithT'].min(axis=0))
     # df_min_max['QWithoutT'] = (df_min_max['QWithoutT'] - df_min_max['QWithoutT'].min(axis=0)) / (df_min_max['QWithoutT'].max(axis=0) - df_min_max['QWithoutT'].min(axis=0))    
     
-    df_min_max['PoverQWithTransfer'] = df_min_max['P'] - df_min_max['QWithT'] # 
-    df_min_max['PoverQWithoutTransfer'] = df_min_max['P'] - df_min_max['QWithoutT'] # 
+    df_min_max['PoverQ_online'] = df_min_max['P'] - df_min_max['QWithT'] # 
+    df_min_max['PoverQ_offline'] = df_min_max['P'] - df_min_max['QWithoutT'] # 
     
 
 
     #Calculate time taken for inference
     print("End inference in {:.2f} seconds".format(time.time() - start))
 
-    sr = df_min_max[['Source IP', 'Dest IP', 'P', 'PoverQWithTransfer','PoverQWithoutTransfer', 'QWithT', 'QWithoutT']] #, 'PoverQTilde']]
+    sr = df_min_max[['Source IP', 'Dest IP', 'P', 'PoverQ_online','PoverQ_offline', 'QWithT', 'QWithoutT']] #, 'PoverQTilde']]
     # print('c4')
     # sr.reset_index(inplace=True)
     # print('/////////////////')
@@ -283,8 +296,8 @@ def main():
 
     # #load models
     modelP = load_model(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelP')
-    modelQWithTransfer = load_model(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQWithTransfer')
-    modelQWithoutTransfer = load_model(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQWithoutTransfer')
+    modelQ_online = load_model(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQ_online')
+    modelQ_offline = load_model(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'modelQ_offline')
 
     # load dataset
     df_normal = pd.read_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'N1.csv')
@@ -312,38 +325,38 @@ def main():
     with open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'tokenizer_attack.pickle', 'rb') as handle:
         tokenizer_attack = pickle.load(handle)
 
-    sr = calculateSequenceScores(modelP, modelQWithTransfer, modelQWithoutTransfer, tokenizer_normal, tokenizer_attack, df_normal, df_attack, df_test, config['SEQUENCELENGTH'])
+    sr = calculateSequenceScores(modelP, modelQ_online, modelQ_offline, tokenizer_normal, tokenizer_attack, df_normal, df_attack, df_test, config['SEQUENCELENGTH'])
     # sr = calculateSequenceScores(modelP, tokenizer_normal, df_normal, df_test, config['SEQUENCELENGTH']) # add for P only
-    # sr = calculateSequenceScores(modelP, modelQWithTransfer, tokenizer_normal, tokenizer_attack, df_normal, df_attack, df_test, config['SEQUENCELENGTH']) # add for Q no transfer
+    # sr = calculateSequenceScores(modelP, modelQ_online, tokenizer_normal, tokenizer_attack, df_normal, df_attack, df_test, config['SEQUENCELENGTH']) # add for Q no transfer
 
     sr_P = sr[['Source IP', 'Dest IP', 'P']].copy()
-    sr_PoverQWithTransfer = sr[['Source IP', 'Dest IP', 'PoverQWithTransfer']].copy()
-    sr_PoverQWithoutTransfer = sr[['Source IP', 'Dest IP', 'PoverQWithoutTransfer']].copy()
+    sr_PoverQ_online = sr[['Source IP', 'Dest IP', 'PoverQ_online']].copy()
+    sr_PoverQ_offline = sr[['Source IP', 'Dest IP', 'PoverQ_offline']].copy()
     sr_onlineQ = sr[['Source IP', 'Dest IP', 'QWithT']].copy() # add for online Q 
     sr_offlineQ = sr[['Source IP', 'Dest IP', 'QWithoutT']].copy() # add for offline Q
 
     sr_P = sr_P.sort_values(by = ['P'])
-    sr_PoverQWithTransfer = sr_PoverQWithTransfer.sort_values(by = ['PoverQWithTransfer'])
-    sr_PoverQWithoutTransfer = sr_PoverQWithoutTransfer.sort_values(by = ['PoverQWithoutTransfer'])
+    sr_PoverQ_online = sr_PoverQ_online.sort_values(by = ['PoverQ_online'])
+    sr_PoverQ_offline = sr_PoverQ_offline.sort_values(by = ['PoverQ_offline'])
     sr_onlineQ = sr_onlineQ.sort_values(by = ['QWithT']) # add for online Q 
     sr_offlineQ = sr_offlineQ.sort_values(by = ['QWithoutT']) # add for offline Q
 
     # #Store the data as binary data stream
-    # sr_P.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'PScore')
     sr_P.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PScore')
 
-    # sr_PoverQWithTransfer.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'POverQWithTransferScore')
-    sr_PoverQWithTransfer.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'POverQWithTransferScore')
+    sr_PoverQ_online.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PoverQonline_score') #'POverQWithTransferScore')
     
-    # sr_PoverQWithoutTransfer.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'POverQWithoutTransferScore')
-    sr_PoverQWithoutTransfer.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'POverQWithoutTransferScore')
+    sr_PoverQ_offline.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PoverQoffline_score') #'POverQWithoutTransferScore')
 
     sr_onlineQ.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'onlineQ')
     sr_offlineQ.to_pickle(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'offlineQ')
 
+    # add Save scores to csv
+    
+    K.clear_session() # add
     print("*****     Ending Inferencing     ******")
 
-    sess.close() # add
+    # sess.close() # add
 
 if __name__ == "__main__":
     main()
