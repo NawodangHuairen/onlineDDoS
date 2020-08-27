@@ -119,7 +119,9 @@ def trainModelP(size, max_len, vocab_size, config):
           'progress' : config['metadata']['uniqueID'],
           'n_classes': vocab_size,
           'n_channels': 1,
-          'shuffle': True}
+          'shuffle': True,
+          'artefact_dir': config['metadata']['artefact'] # add
+          }
 
     input_emb_dim = config['MODELPARAMS']['INPUT_EMBED_DIM']
     lstm_emb_dim = config['MODELPARAMS']['LSTM_DIM']
@@ -178,7 +180,9 @@ def trainModelQ(size, max_len, vocab_size, config, fname, index=0, online=True):
           'progress' : config['metadata']['uniqueID'],
           'n_classes': vocab_size,
           'n_channels': 1,
-          'shuffle': True}
+          'shuffle': True,
+          'artefact_dir': config['metadata']['artefact'] # add
+          }
 
     input_emb_dim = config['MODELPARAMS']['INPUT_EMBED_DIM']
     lstm_emb_dim = config['MODELPARAMS']['LSTM_DIM_Q']
@@ -273,7 +277,9 @@ def updateModel(model, index, size, max_len, vocab_size, config, fname) :
           'progress' : config['metadata']['uniqueID'],
           'n_classes': vocab_size,
           'n_channels': 1,
-          'shuffle': True}
+          'shuffle': True,
+          'artefact_dir': config['metadata']['artefact'] # add
+          }
 
     input_emb_dim = config['MODELPARAMS']['INPUT_EMBED_DIM']
     lstm_emb_dim = config['MODELPARAMS']['LSTM_DIM_Q']

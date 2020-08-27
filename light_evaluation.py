@@ -108,7 +108,7 @@ def main():
         
     for (IP, IPD, score) in list(userScoreP.itertuples(index=False, name=None)):
         # if IP != '172.16.0.1' and IP == '192.168.10.50': # equivalent to (if IP == '192.168.10.50')
-        if (IP != '172.16.0.1' and IPD=='192.168.10.50') or IP == '192.168.10.50':
+        if (IP != '172.16.0.1' and IPD=='192.168.10.50') or IP == '192.168.10.50': # CIC 2017
             trueNormals.append(IP + IPD)
 
     print("Length of trueNormals: ", len(trueNormals))
@@ -143,7 +143,7 @@ def main():
 
     df_FPresults = pd.DataFrame({"P" : graphP, "Online Q" : graphPQ_online, "Offline Q" : graphPQ_offline})
     df_FPresults.to_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + 
-                    "_FP_finalresults.csv", index=False)
+                    "_FPfinalresults.csv", index=False)
 
 
     print("*****     Ending Evaluation     ******")

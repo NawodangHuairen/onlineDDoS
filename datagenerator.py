@@ -3,7 +3,7 @@ import keras
 
 class DataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
-    def __init__(self, atkOrNorm, index, list_IDs, batch_size=32, dim=(32,32,32), n_channels=1,
+    def __init__(self, atkOrNorm, index, list_IDs, artefact_dir, batch_size=32, dim=(32,32,32), n_channels=1,
                  n_classes=10, progress=None, shuffle=True):
         'Initialization'
         self.atk = atkOrNorm
@@ -16,6 +16,7 @@ class DataGenerator(keras.utils.Sequence):
         self.n_classes = n_classes
         self.shuffle = shuffle
         self.on_epoch_end()
+        self.artefact_dir = artefact_dir # add
         
 
     def __len__(self):
@@ -57,14 +58,14 @@ class DataGenerator(keras.utils.Sequence):
         index = self.index
         
         if index is None and directory is 'normal': # add P data
-            dataX = np.load(progress + '/' + 'artefact' + '/' + directory + 'URITraining.npy')
-            dataY = np.load(progress + '/' + 'artefact' + '/' + directory + 'URILabel.npy')
+            dataX = np.load(progress + '/' + self.artefact_dir + '/' + directory + 'URITraining.npy')
+            dataY = np.load(progress + '/' + self.artefact_dir + '/' + directory + 'URILabel.npy')
         elif index is not None and directory is 'attack': # add Online Q data
-            dataX = np.load(progress + '/' + 'artefact' + '/' + directory + 'URITraining_' + str(index) + '.npy')
-            dataY = np.load(progress + '/' + 'artefact' + '/' + directory + 'URILabel_' + str(index) + '.npy')
+            dataX = np.load(progress + '/' + self.artefact_dir + '/' + directory + 'URITraining_' + str(index) + '.npy')
+            dataY = np.load(progress + '/' + self.artefact_dir + '/' + directory + 'URILabel_' + str(index) + '.npy')
         else: # add Offline Q data
-            dataX = np.load(progress + '/' + 'artefact' + '/' + directory + 'URITraining_full.npy')
-            dataY = np.load(progress + '/' + 'artefact' + '/' + directory + 'URILabel_full.npy')            
+            dataX = np.load(progress + '/' + self.artefact_dir + '/' + directory + 'URITraining_full.npy')
+            dataY = np.load(progress + '/' + self.artefact_dir + '/' + directory + 'URILabel_full.npy')            
         
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
