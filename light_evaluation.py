@@ -18,22 +18,22 @@ def loadConfig():
         cfg = yaml.load(ymlfile)
     return cfg
 
-def filterAndSort(df) :
-    df = df.sort_values(by=['timestamp'])
-    before = len(df)
-    df = df.groupby('remote_addr').filter(lambda x: len(x) > 10)
-    after = len(df)
-    df = df.reset_index()
+# def filterAndSort(df) :
+#     df = df.sort_values(by=['timestamp'])
+#     before = len(df)
+#     df = df.groupby('remote_addr').filter(lambda x: len(x) > 10)
+#     after = len(df)
+#     df = df.reset_index()
 
-    print("Before = {}, After = {}".format(before, after))
+#     print("Before = {}, After = {}".format(before, after))
 
-    return df
+#     return df
 
 #Create a function that plots the graphs with acceptance rate of 0.1,0.2 ..... 1.0
 #Calculate those who got normal how many were rejected wrongly and not inside the AGT List.
 import math
 
-def calculateFalsePositives(agtIPList, scoreDict, percentages, numNorm) :
+def calculateFalsePositives(agtIPList, agt_attacks, scoreDict, percentages, numNorm) :
     numNormal = numNorm
     numTotalIP = len(scoreDict)
     cutOff = []
@@ -44,18 +44,23 @@ def calculateFalsePositives(agtIPList, scoreDict, percentages, numNorm) :
     
     scoreCount = 0
     index = 0
-
+    tp_count = 0 # add
+    truepos = [] # add
+    
     for (IP, IPD, score) in list(scoreDict.itertuples(index=False, name=None)):
         if IP + IPD in agtIPList:
             scoreCount = scoreCount + 1
+        if IP + IPD in agt_attacks: # add
+            tp_count = tp_count + 1 # add
             
         index = index + 1
         if index in cutOff :
             falsepositives.append(scoreCount/numNormal)
+            truepos.append(tp_count / index) #len(agt_attacks)) # add
             
-    return falsepositives
+    return falsepositives, truepos
         
-def plotAndSaveGraph(PQ, P, PQTil, Qonline, Qoffline, config):
+def plotAndSaveGraph(PQ, P, PQTil, Qonline, Qoffline, config, plt=False):
 # def plotAndSaveGraph(PQ, P, config):
     percentages = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
@@ -64,34 +69,53 @@ def plotAndSaveGraph(PQ, P, PQTil, Qonline, Qoffline, config):
     ax = plot.subplot(111)
     # #ax.plot(percentages, old_graphScoreList, label = "Old P Over Q Scores")
     # #ax.plot(percentages, old_graphPList, label = "Old P Scores")
-    ax.plot(percentages, percentages, label = "Randomized Rejection")
-    ax.plot(percentages, P, label = "P Only")
-    ax.plot(percentages, PQ, label = "Online P/Q") #With Transfer")
-    ax.plot(percentages, PQTil, label = "Offline P/Q") #Without Transfer") 
-    # ax.plot(percentages, Qonline, label = "Online Q")
-    # ax.plot(percentages, Qoffline, label = "Offline Q") 
+    ax.plot(percentages, percentages, linewidth=2, label = "Randomized Rejection")
+    ax.plot(percentages, P, linewidth=2, label = "N Only")
+    ax.plot(percentages, PQ, linewidth=2, label = "Online N/D") #With Transfer")
+    ax.plot(percentages, PQTil, linewidth=2, label = "Offline N/D") #Without Transfer") 
+#     ax.plot(percentages, Qonline, label = "Online Q")
+#     ax.plot(percentages, Qoffline, label = "Offline Q") 
     
-    plot.xlabel('Rejection Threshold')
-    plot.ylabel('False Reject Rates')
-    plot.title("False Positive rates for " + config['metadata']['name'])
-    ax.legend()
-    # plot.savefig(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + config['metadata']['name'] + '_FPGraph')
-    plot.savefig(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '_FPGraph')
+#     plot.xlabel('Rejection Threshold', fontsize=24)
+#     plot.ylabel('False Reject Rates', fontsize=24)
+#     plot.title("False Positive rates for " + config['metadata']['name'])
+    ax.legend(fontsize=18)
+    if plt:
+        plot.savefig(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '_FPGraph')
+
+def calc_eval(fpr, tpr, agt_norm, agt_attk):
+    fpr = np.array(fpr[1:])
+    tpr = np.array(tpr)
+
+    Total = len(agt_norm)+len(agt_attk) #len(userScoreP)
+    TotalN = len(agt_norm)
+    TotalP = Total-TotalN
+    FP = fpr*TotalN
+    TN = TotalN - FP
+    TP = tpr*TotalP
+    FN = TotalP-TP
+    
+    Accr = (TP+TN) / (TP+TN+FP+FN)
+    FPR = FP / (FP + TN)
+    Prec = TP / (TP + FP)
+    Rec = TP / (TP + FN)
+    F1 = 2 * ((Prec*Rec) / (Prec+Rec))
+
+    return (Accr, FPR, Prec, Rec, F1)
+
+
 
 def main():
     print("*****     Starting Evaluation     ******")
     config = loadConfig()
 
     # #Load User Scores
-    # userScoreP = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'PScore', 'rb'))
     userScoreP = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PScore', 'rb'))
     userScoreP = userScoreP.sort_values(by = ['P'],ascending=False) # add
-    
-    # userScorePQ_online  = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'POverQWithTransferScore', 'rb'))
+
     userScorePQ_online = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PoverQonline_score', 'rb'))
     userScorePQ_online = userScorePQ_online.sort_values(by = ['PoverQ_online'],ascending=False) # add 
 
-    # userScorePQ_offline = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + '/' + 'POverQWithoutTransferScore', 'rb'))
     userScorePQ_offline = pickle.load(open(config['metadata']['uniqueID'] + '/' + config['metadata']['artefact'] + '/' + 'PoverQoffline_score', 'rb'))
     userScorePQ_offline = userScorePQ_offline.sort_values(by = ['PoverQ_offline'],ascending=False) 
 
@@ -102,48 +126,58 @@ def main():
     userScoreQoffline = userScoreQoffline.sort_values(by = ['QWithoutT'],ascending=False)
 
 
-    trueNormals = []
-    
-    print("Length of userScoreP: ", len(userScoreP))
-        
-    for (IP, IPD, score) in list(userScoreP.itertuples(index=False, name=None)):
-        # if IP != '172.16.0.1' and IP == '192.168.10.50': # equivalent to (if IP == '192.168.10.50')
-        if (IP != '172.16.0.1' and IPD=='192.168.10.50') or IP == '192.168.10.50': # CIC 2017
-            trueNormals.append(IP + IPD)
+    agt_normals = []
+    agt_attacks = []
 
-    print("Length of trueNormals: ", len(trueNormals))
+    print("Length of userScoreP: ", len(userScoreP))
+
+    for (IP, IPD, score) in list(userScoreP.itertuples(index=False, name=None)):
+    #     if IP != '172.16.0.1' and IP == '192.168.10.50': # CIC Friday
+    #     if (IP != '172.16.0.1' and IPD=='192.168.10.50') or IP == '192.168.10.50': # CIC Wed
+    #     if (IP != '172.16.0.1' and IPD=='192.168.10.50') or IP == '192.168.10.50': 
+        if (IP != '172.16.0.1' and  IPD=='192.168.10.50') or IP == '192.168.10.50': 
+            agt_normals.append(IP + IPD)
+        else:
+            agt_attacks.append(IP+IPD)
+
+    print("Length of Normal traffic: ", len(agt_normals))
+    print("Length of true attacks: ", len(agt_attacks))
 
     #Plot some graphs
     percentages = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
-    num = len(trueNormals)
+    num = len(agt_normals)
+    print("Percent: ", num/len(userScoreP))
 
-    graphP = calculateFalsePositives(trueNormals, userScoreP, percentages, num)
-    graphPQ_online = calculateFalsePositives(trueNormals, userScorePQ_online, percentages, num)
-    graphPQ_offline = calculateFalsePositives(trueNormals, userScorePQ_offline, percentages, num)
-    graphQonline = calculateFalsePositives(trueNormals, userScoreQonline, percentages, num)
-    graphQoffline = calculateFalsePositives(trueNormals, userScoreQoffline, percentages, num)    
-    
-    
-    # print("graphPQ_online: ", graphPQ_online)
-    
-    graphPQ_online.insert(0, 0)
+    graphP, P_tpr = calculateFalsePositives(agt_normals, agt_attacks, userScoreP, percentages, num)
+    graphPQ_online, onlinePQ_tpr = calculateFalsePositives(agt_normals, agt_attacks, userScorePQ_online, percentages, num)
+    graphPQ_offline, offlinePQ_tpr  = calculateFalsePositives(agt_normals, agt_attacks, userScorePQ_offline, percentages, num)
+    graphQonline, _ = calculateFalsePositives(agt_normals, agt_attacks, userScoreQonline, percentages, num)
+    graphQoffline, _ = calculateFalsePositives(agt_normals, agt_attacks, userScoreQoffline, percentages, num)   
+
     graphP.insert(0, 0)
+    graphPQ_online.insert(0, 0)
     graphPQ_offline.insert(0, 0)
-    graphQonline.insert(0, 0)
-    graphQoffline.insert(0, 0)
-    
-    plotAndSaveGraph(graphPQ_online, graphP, graphPQ_offline, graphQonline, graphQoffline, config)
-    # plotAndSaveGraph(graphPQ_online, graphP, config)
+    # graphQonline.insert(0, 0)
+    # graphQoffline.insert(0, 0)
 
-    # add Save FP results in csv 
-    graphP = np.array(graphP)
-    graphPQ_online= np.array(graphPQ_online)
-    graphPQ_offline= np.array(graphPQ_offline)
+    plotAndSaveGraph(graphPQ_online, graphP, graphPQ_offline, graphQonline, graphQoffline, config, plt=True)
 
-    df_FPresults = pd.DataFrame({"P" : graphP, "Online Q" : graphPQ_online, "Offline Q" : graphPQ_offline})
+    ### Calculate evaluation metrics 
+
+    P_metrics = np.array(np.transpose(calc_eval(graphP, P_tpr, agt_normals, agt_attacks)))
+    onlinePQ_metrics = np.array(np.transpose(calc_eval(graphPQ_online, onlinePQ_tpr, agt_normals, agt_attacks)))
+    offlinePQ_metrics = np.array(np.transpose(calc_eval(graphPQ_offline, offlinePQ_tpr, agt_normals, agt_attacks)))
+
+    P_metrics = pd.DataFrame(P_metrics, columns=['Accr_P', 'FPR_P', 'Prec_P', 'Rec_P', 'F1_P'])
+    onlinePQ_metrics = pd.DataFrame(onlinePQ_metrics, columns=['Accr_onPQ', 'FPR_onPQ', 
+                                                               'Prec_onPQ', 'Rec_onPQ', 'F1_onPQ'])
+    offlinePQ_metrics = pd.DataFrame(offlinePQ_metrics, columns=['Accr_offPQ', 'FPR_offPQ', 
+                                                                 'Prec_offPQ', 'Rec_offPQ', 'F1_offPQ'])
+    df_FPresults = pd.concat([P_metrics,onlinePQ_metrics,offlinePQ_metrics],axis=1)
+
     df_FPresults.to_csv(config['metadata']['uniqueID'] + '/' + config['metadata']['result'] + 
-                    "_FPfinalresults.csv", index=False)
+                        "_evalresults.csv", index=False)
 
 
     print("*****     Ending Evaluation     ******")
