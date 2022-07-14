@@ -1,0 +1,79 @@
+metadata:
+  #Unique identifier for organisational purposes. make sure this is same as the shell command ID
+  # -------MODIFY-------
+  uniqueID: ids_test2
+  # _________
+  #Specify folder to store created files
+  # -------MODIFY-------
+  artefact: artefact_slowhttp
+  # _________  
+  #DatasetName (for graph title purposes)
+  name: CIC2017Wed_slowhttp
+  #Result folder name (for all results)
+  # -------MODIFY-------
+  result: result/test2_httpeval1 #test2_http4seq10
+  # _________
+  #Set number of intervals to use as TEST set (preprocess.py)
+  attackintervals: 5 #10
+#Please input the relative path of the dataset accurately!
+datapath:
+  #Attack DS + Normal DS (.csv format)
+  a: ../datasets/Wednesday2017/A_Slowhttptest.csv #Friday2017/A.csv
+  #Normal DS (.parquet format)
+  n1: ../datasets/Wednesday2017/N1.csv #Friday2017/N1.csv
+  #True Normal DS (.parquet format)
+  n2: ../datasets/Wednesday2017/N2.csv #Friday2017/N2.csv
+#Range of values to hash to.
+#TimeDifference bin range can be found inside preprocess.py:getTimeClass function
+variablesHash:
+  #Hash Range for HTTP User Agent.
+  agentHashRange: 50
+  #Hash Range for HTTP GET Queries
+  queryHashRange: 4
+  #Threshold for hashing requests. If lesser than percentage we hash it to inputHashRange
+  #If larger than percentage we preserve the original request
+  inputHashThreshold: 0.01
+  # -------MODIFY-------  
+  #Hash Range for Input (Input is the 4 temporal features)
+  inputHashRange: 750 ##
+  # _________  
+# -------MODIFY-------  
+#Sequence Length
+SEQUENCELENGTH: 10 #200 #20 #30 #90 
+# _________
+#Keras Model Parameters
+MODELPARAMS:
+  #Emedding Layer Output Dimension
+  INPUT_EMBED_DIM: 512 ##
+  #LSTM Output Dimension
+  LSTM_DIM: 300 ##
+  LSTM_DIM_Q: 300 ##
+  #Adam Learning Rates
+  LEARNING_RATE_P: 0.005 #0.001 ##
+  LEARNING_RATE_Q: 0.003 #0.001 ##
+#Keras Training Parameters
+TRAININGPARAMS:
+  #Number of Epochs to train for P
+  EPOCHS_P: 30 ##
+  EPOCHS_Q: 10 ## 
+  #Number of Epochs per interval during interval training of Q
+  INTERVALEPOCHS: 5 ##3
+  #Whether Q Should have 2 Layers of LSTM. If false 1 layer will be used instead. If true 2 layer will be used.
+  # -------MODIFY-------
+  2LAYERLSTMQ: True ##
+  # _________
+  #Whether Q Should transfer All weights or not. If false only embedding will be transfered. If true, all layers will be transferred.
+  ALLLAYERTRANSFER: True ##False #
+  #Batch size
+  BATCH_SIZE: 256 # 512(not too big for online training. causes error if not enough data in the interval) #
+  ONLINE_BATCH_SIZE: 256 #64 #
+  #Percentage of data to be used for training. (1 - Percentage) is for validation.
+  PERCENTAGETRAIN: 0.8 ##
+  PERCENTAGETRAIN_Q: 0.9 ## offline Q
+  PERCENTAGETRAIN_QT: 1.0 ## online Q 
+  #Number of workers to use during training
+  WORKERS: 24
+  #Allow multiprocessing during training (Not sure what this does) True/False
+  MULTIPROCESSING: True
+#Boolean if online training or not
+ONLINETRAINING: True ##
